@@ -244,17 +244,67 @@ class SortQuestion extends QuestionType {
       .sort(() => Math.random() - 0.5);
 
     // 決定ボタンを先に作成（renderItems()で参照するため）
-    const submitBtn = document.createElement('button');
-    submitBtn.type = 'button';
-    submitBtn.className = 'submit-btn';
-    submitBtn.textContent = '回答する';
-    submitBtn.id = 'submit-sort';
-    submitBtn.style.position = 'relative';
-    submitBtn.style.zIndex = '100';
-    container.appendChild(submitBtn);
+    this.submitBtn = document.createElement('button');
+    this.submitBtn.type = 'button';
+    this.submitBtn.className = 'submit-btn';
+    this.submitBtn.textContent = '回答する';
+    this.submitBtn.id = 'submit-sort';
+    this.submitBtn.style.position = 'relative';
+    this.submitBtn.style.zIndex = '100';
+    container.appendChild(this.submitBtn);
 
     // アイテムを描画（submitBtnの前に挿入される）
     this.renderItems();
+
+    // イベントリスナーを直接設定（外部に依存しない）
+    this.setupSubmitButton();
+  }
+
+  setupSubmitButton() {
+    if (!this.submitBtn) {
+      console.error('❌ submitBtn not found in setupSubmitButton!');
+      return;
+    }
+
+    console.log('✅ Setting up submit button directly in SortQuestion');
+
+    let isProcessing = false;
+
+    const handleSubmit = (e) => {
+      console.log('🎯 Submit clicked/touched:', e.type);
+
+      if (isProcessing) {
+        console.log('⏭️ Already processing');
+        return;
+      }
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      isProcessing = true;
+      console.log('✅ Processing answer...');
+
+      soundManager.playSE('click');
+
+      // handleAnswer()を通して正解判定・スコア計算・次の問題表示を行う
+      const userAnswer = this.getAnswer();
+      handleAnswer(userAnswer);
+
+      // リセット（次の問題用）
+      setTimeout(() => {
+        isProcessing = false;
+      }, 1000);
+    };
+
+    // イベントリスナーを設定
+    this.submitBtn.addEventListener('touchstart', (e) => {
+      console.log('👆 Touch started on submit button');
+    }, { passive: true });
+
+    this.submitBtn.addEventListener('click', handleSubmit, { passive: false });
+    this.submitBtn.addEventListener('touchend', handleSubmit, { passive: false });
+
+    console.log('✅ Event listeners attached to submit button');
   }
 
   renderItems() {
@@ -1295,48 +1345,9 @@ function setupQuestionEventListeners() {
       handleAnswer(selectedAnswer);
     });
   } else if (questionType instanceof SortQuestion) {
-    // 並び替え：決定ボタンで回答確定
-    const submitBtn = answerGrid.querySelector('.submit-btn');
-    if (!submitBtn) {
-      console.error('❌ submitBtn not found!');
-      return;
-    }
-    console.log('✅ submitBtn found:', submitBtn);
-    console.log('   Button position:', submitBtn.getBoundingClientRect());
-
-    let isProcessing = false;
-
-    const handleSubmit = (e) => {
-      console.log('🎯 Submit event triggered:', e.type);
-
-      if (isProcessing) {
-        console.log('⏭️ Already processing, skipping');
-        return;
-      }
-
-      e.preventDefault();
-      e.stopPropagation();
-
-      isProcessing = true;
-      console.log('✅ Processing answer...');
-
-      soundManager.playSE('click');
-      const selectedAnswer = questionType.getAnswer();
-      handleAnswer(selectedAnswer);
-
-      // リセット（次の問題用）
-      setTimeout(() => {
-        isProcessing = false;
-      }, 1000);
-    };
-
-    // タッチデバイスとマウスの両方に対応
-    submitBtn.addEventListener('touchstart', (e) => {
-      console.log('👆 Touch started');
-    });
-
-    submitBtn.addEventListener('click', handleSubmit, { passive: false });
-    submitBtn.addEventListener('touchend', handleSubmit, { passive: false });
+    // 並び替え：SortQuestionクラス内で直接イベントリスナーを設定済み
+    // setupSubmitButton()が既に呼ばれているため、ここでは何もしない
+    console.log('ℹ️ SortQuestion handles its own event listeners');
   }
 }
 
