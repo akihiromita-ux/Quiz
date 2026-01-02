@@ -243,9 +243,7 @@ class SortQuestion extends QuestionType {
       .map((option, index) => ({ text: option, originalIndex: index }))
       .sort(() => Math.random() - 0.5);
 
-    this.renderItems();
-
-    // 決定ボタン
+    // 決定ボタンを先に作成（renderItems()で参照するため）
     const submitBtn = document.createElement('button');
     submitBtn.type = 'button';
     submitBtn.className = 'submit-btn';
@@ -254,6 +252,9 @@ class SortQuestion extends QuestionType {
     submitBtn.style.position = 'relative';
     submitBtn.style.zIndex = '100';
     container.appendChild(submitBtn);
+
+    // アイテムを描画（submitBtnの前に挿入される）
+    this.renderItems();
   }
 
   renderItems() {
