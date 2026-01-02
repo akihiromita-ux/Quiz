@@ -263,22 +263,28 @@ class SortQuestion extends QuestionType {
   setupSubmitButton() {
     if (!this.submitBtn) {
       console.error('❌ submitBtn not found in setupSubmitButton!');
-      alert('ERROR: Submit button not found!');
       return;
     }
 
     console.log('✅ Setting up submit button directly in SortQuestion');
 
+    // データの整合性チェック
+    if (!this.data || !this.data.answer) {
+      console.error('❌ SortQuestion data is invalid:', this.data);
+      alert('エラー: 問題データが正しく読み込まれていません。ページを再読み込みしてください。');
+      return;
+    }
+
+    console.log('✅ Data validation passed. Answer:', this.data.answer);
+
     let isProcessing = false;
 
     const handleSubmit = (e) => {
       try {
-        alert('Button Clicked! Event type: ' + e.type);
         console.log('🎯 Submit clicked/touched:', e.type);
 
         if (isProcessing) {
           console.log('⏭️ Already processing');
-          alert('Already processing, please wait');
           return;
         }
 
@@ -298,17 +304,21 @@ class SortQuestion extends QuestionType {
           });
         }
 
-        alert('About to play sound...');
         soundManager.playSE('click');
-        alert('Sound played. Getting answer...');
 
         // handleAnswer()を通して正解判定・スコア計算・次の問題表示を行う
         const userAnswer = this.getAnswer();
         console.log('User answer:', userAnswer);
-        alert('Answer: ' + JSON.stringify(userAnswer));
+
+        // データの再検証（iOSでの非同期読み込み対策）
+        if (!this.data || !this.data.answer) {
+          console.error('❌ Data lost during processing!');
+          alert('エラー: 問題データが失われました。ページを再読み込みしてください。');
+          isProcessing = false;
+          return;
+        }
 
         handleAnswer(userAnswer);
-        alert('handleAnswer called successfully!');
 
         // リセット（次の問題用）
         setTimeout(() => {
@@ -317,7 +327,7 @@ class SortQuestion extends QuestionType {
 
       } catch (error) {
         console.error('❌ Error in handleSubmit:', error);
-        alert('ERROR in handleSubmit: ' + error.message + '\nStack: ' + error.stack);
+        alert('エラーが発生しました: ' + error.message);
         isProcessing = false;
       }
     };
@@ -331,7 +341,6 @@ class SortQuestion extends QuestionType {
     this.submitBtn.addEventListener('touchend', handleSubmit, { passive: false });
 
     console.log('✅ Event listeners attached to submit button');
-    alert('Event listeners attached to submit button!');
   }
 
   renderItems() {
@@ -420,12 +429,17 @@ class SortQuestion extends QuestionType {
   getAnswer() {
     try {
       console.log('getAnswer() called, currentOrder:', this.currentOrder);
+
+      if (!this.currentOrder || this.currentOrder.length === 0) {
+        console.error('❌ currentOrder is empty');
+        return [];
+      }
+
       const answer = this.currentOrder.map(item => item.text);
       console.log('getAnswer() result:', answer);
       return answer;
     } catch (error) {
       console.error('❌ Error in getAnswer:', error);
-      alert('ERROR in getAnswer: ' + error.message);
       return [];
     }
   }
@@ -434,7 +448,13 @@ class SortQuestion extends QuestionType {
     try {
       console.log('validate() called');
       console.log('  userAnswer:', userAnswer);
-      console.log('  correctAnswer:', this.data.answer);
+      console.log('  correctAnswer:', this.data ? this.data.answer : 'NO DATA');
+
+      // データの存在チェック
+      if (!this.data || !this.data.answer) {
+        console.error('❌ this.data or this.data.answer is missing');
+        return false;
+      }
 
       if (!Array.isArray(userAnswer) || !Array.isArray(this.data.answer)) {
         console.error('❌ Invalid array in validate');
@@ -446,37 +466,56 @@ class SortQuestion extends QuestionType {
         return false;
       }
 
-      const result = userAnswer.every((val, idx) => val === this.data.answer[idx]);
+      const result = userAnswer.every((val, idx) => {
+        const isMatch = val === this.data.answer[idx];
+        console.log(`  [${idx}] "${val}" === "${this.data.answer[idx]}" ? ${isMatch}`);
+        return isMatch;
+      });
+
       console.log('validate() result:', result);
       return result;
     } catch (error) {
       console.error('❌ Error in validate:', error);
-      alert('ERROR in validate: ' + error.message);
       return false;
     }
   }
 
   getCorrectAnswer() {
-    return this.data.answer;
+    return this.data && this.data.answer ? this.data.answer : [];
   }
 
   showResult(isCorrect, userAnswer) {
-    const items = this.container.querySelectorAll('.sort-item');
-    const submitBtn = this.container.querySelector('.submit-btn');
-    const buttons = this.container.querySelectorAll('.sort-btn');
+    try {
+      const items = this.container.querySelectorAll('.sort-item');
+      const submitBtn = this.container.querySelector('.submit-btn');
+      const buttons = this.container.querySelectorAll('.sort-btn');
 
-    // すべてのボタンを無効化
-    buttons.forEach(btn => btn.disabled = true);
-    if (submitBtn) submitBtn.style.display = 'none';
+      // すべてのボタンを無効化
+      buttons.forEach(btn => btn.disabled = true);
+      if (submitBtn) submitBtn.style.display = 'none';
 
-    // 各アイテムに正解/不正解のクラスを追加
-    items.forEach((item, index) => {
-      if (userAnswer[index] === this.data.answer[index]) {
-        item.classList.add('correct');
-      } else {
-        item.classList.add('incorrect');
+      // データの存在チェック
+      if (!this.data || !this.data.answer) {
+        console.error('❌ Cannot show result: data.answer is missing');
+        return;
       }
-    });
+
+      // 各アイテムに正解/不正解のクラスを追加
+      items.forEach((item, index) => {
+        // 安全な配列アクセス
+        if (index < userAnswer.length && index < this.data.answer.length) {
+          if (userAnswer[index] === this.data.answer[index]) {
+            item.classList.add('correct');
+          } else {
+            item.classList.add('incorrect');
+          }
+        }
+      });
+
+      console.log('✅ showResult completed');
+    } catch (error) {
+      console.error('❌ Error in showResult:', error);
+    }
   }
 }
 
@@ -612,6 +651,7 @@ const gameState = {
   playerName: '', // プレイヤーの名前
   characterName: '', // キャラクターの名前
   hasHatched: false, // 孵化済みかどうか
+  needsHatchAnimation: false, // 孵化演出を表示する必要があるか
   level: 1, // 廃止予定：後方互換性のため残す
   exp: 0,
   maxExp: 100,
@@ -1013,12 +1053,11 @@ function gainExp(amount) {
     // 装備アンロックチェック（全体レベルに基づく）
     checkEquipmentUnlock();
 
-    // Lv.5到達時に孵化イベント（現在のステージがLv.5に到達した場合）
+    // Lv.5到達時に孵化フラグを設定（実際の演出はリザルト画面で表示）
     if (stageLevel.level === 5 && !gameState.hasHatched) {
       gameState.hasHatched = true;
-      setTimeout(() => {
-        showHatchAnimation();
-      }, 1500); // リザルト画面表示後に孵化演出を開始
+      gameState.needsHatchAnimation = true; // リザルト画面で孵化演出を表示するフラグ
+      console.log('🥚 孵化条件達成！リザルト画面で演出を表示します');
     }
 
     updateCharacterDisplay(); // レベルアップ時にキャラクター表示を更新
@@ -1524,6 +1563,15 @@ function showResultScreen() {
   }
 
   saveGameData();
+
+  // 孵化演出が必要な場合は、リザルト画面表示後に実行
+  if (gameState.needsHatchAnimation) {
+    gameState.needsHatchAnimation = false; // フラグをリセット
+    console.log('🥚 リザルト画面で孵化演出を開始します');
+    setTimeout(() => {
+      showHatchAnimation();
+    }, 2000); // リザルト画面を表示してから2秒後に孵化演出
+  }
 }
 
 // ===== ステータス画面 =====
@@ -2418,10 +2466,8 @@ async function init() {
         Howler.ctx.resume().then(() => {
           console.log('✅ Audio Context unlocked successfully!');
           audioUnlocked = true;
-          alert('Audio unlocked! State: ' + Howler.ctx.state);
         }).catch(err => {
           console.error('❌ Failed to unlock Audio Context:', err);
-          alert('Failed to unlock audio: ' + err.message);
         });
       } else {
         console.log('✅ Audio Context already in state:', Howler.ctx.state);
