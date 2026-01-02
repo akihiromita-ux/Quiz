@@ -247,9 +247,12 @@ class SortQuestion extends QuestionType {
 
     // 決定ボタン
     const submitBtn = document.createElement('button');
+    submitBtn.type = 'button';
     submitBtn.className = 'submit-btn';
     submitBtn.textContent = '回答する';
     submitBtn.id = 'submit-sort';
+    submitBtn.style.position = 'relative';
+    submitBtn.style.zIndex = '100';
     container.appendChild(submitBtn);
   }
 
@@ -286,7 +289,13 @@ class SortQuestion extends QuestionType {
     const downButtons = this.container.querySelectorAll('.sort-down');
 
     upButtons.forEach(btn => {
+      btn.type = 'button';
+      let isHandling = false;
+
       const handleUp = (e) => {
+        if (isHandling) return;
+        isHandling = true;
+
         e.preventDefault();
         e.stopPropagation();
         const index = parseInt(btn.dataset.index);
@@ -297,13 +306,21 @@ class SortQuestion extends QuestionType {
           this.renderItems();
           soundManager.playSE('click');
         }
+
+        setTimeout(() => { isHandling = false; }, 300);
       };
-      btn.addEventListener('click', handleUp);
-      btn.addEventListener('touchend', handleUp);
+      btn.addEventListener('click', handleUp, { passive: false });
+      btn.addEventListener('touchend', handleUp, { passive: false });
     });
 
     downButtons.forEach(btn => {
+      btn.type = 'button';
+      let isHandling = false;
+
       const handleDown = (e) => {
+        if (isHandling) return;
+        isHandling = true;
+
         e.preventDefault();
         e.stopPropagation();
         const index = parseInt(btn.dataset.index);
@@ -314,9 +331,11 @@ class SortQuestion extends QuestionType {
           this.renderItems();
           soundManager.playSE('click');
         }
+
+        setTimeout(() => { isHandling = false; }, 300);
       };
-      btn.addEventListener('click', handleDown);
-      btn.addEventListener('touchend', handleDown);
+      btn.addEventListener('click', handleDown, { passive: false });
+      btn.addEventListener('touchend', handleDown, { passive: false });
     });
   }
 
@@ -1281,19 +1300,42 @@ function setupQuestionEventListeners() {
       console.error('❌ submitBtn not found!');
       return;
     }
-    console.log('✅ submitBtn found, setting up event listener');
+    console.log('✅ submitBtn found:', submitBtn);
+    console.log('   Button position:', submitBtn.getBoundingClientRect());
+
+    let isProcessing = false;
 
     const handleSubmit = (e) => {
+      console.log('🎯 Submit event triggered:', e.type);
+
+      if (isProcessing) {
+        console.log('⏭️ Already processing, skipping');
+        return;
+      }
+
       e.preventDefault();
       e.stopPropagation();
-      console.log('🎯 Submit button clicked!');
+
+      isProcessing = true;
+      console.log('✅ Processing answer...');
+
       soundManager.playSE('click');
       const selectedAnswer = questionType.getAnswer();
       handleAnswer(selectedAnswer);
+
+      // リセット（次の問題用）
+      setTimeout(() => {
+        isProcessing = false;
+      }, 1000);
     };
 
-    submitBtn.addEventListener('click', handleSubmit);
-    submitBtn.addEventListener('touchend', handleSubmit);
+    // タッチデバイスとマウスの両方に対応
+    submitBtn.addEventListener('touchstart', (e) => {
+      console.log('👆 Touch started');
+    });
+
+    submitBtn.addEventListener('click', handleSubmit, { passive: false });
+    submitBtn.addEventListener('touchend', handleSubmit, { passive: false });
   }
 }
 

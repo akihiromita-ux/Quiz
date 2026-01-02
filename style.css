@@ -678,6 +678,9 @@ body {
   font-family: 'Arial Black', 'Hiragino Sans', sans-serif;
   touch-action: manipulation;
   -webkit-tap-highlight-color: rgba(212, 168, 75, 0.3);
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .submit-btn:hover {
@@ -1676,14 +1679,22 @@ body {
   }
 
   .sort-btn {
-    width: 44px;
-    height: 44px;
+    width: 48px;
+    height: 48px;
     font-size: 1.4rem;
     border-width: 3px;
+    min-width: 48px;
+    min-height: 48px;
   }
 
   .sort-text {
     font-size: 0.95rem;
+  }
+
+  .submit-btn {
+    padding: 18px 32px;
+    font-size: 1.1rem;
+    min-height: 60px;
   }
 }
 
@@ -2188,6 +2199,9 @@ body {
   justify-content: center;
   touch-action: manipulation;
   -webkit-tap-highlight-color: rgba(212, 168, 75, 0.3);
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .sort-btn:hover:not(:disabled) {
