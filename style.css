@@ -1667,6 +1667,22 @@ body {
   .volume-control input[type="range"] {
     width: 100%;
   }
+
+  .sort-item {
+    padding: 14px 16px;
+    gap: 12px;
+  }
+
+  .sort-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 1.4rem;
+    border-width: 3px;
+  }
+
+  .sort-text {
+    font-size: 0.95rem;
+  }
 }
 
 /* ===== ホームボタン（グラスモーフィズム） ===== */
@@ -2138,7 +2154,6 @@ body {
   border-radius: 16px;
   padding: 18px 22px;
   margin: 12px 0;
-  cursor: move;
   display: flex;
   align-items: center;
   gap: 18px;
@@ -2148,6 +2163,42 @@ body {
   box-shadow:
     0 4px 20px rgba(0, 0, 0, 0.5),
     inset 0 1px 0 rgba(212, 168, 75, 0.1);
+}
+
+.sort-controls {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.sort-btn {
+  width: 40px;
+  height: 40px;
+  border: 2px solid rgba(212, 168, 75, 0.4);
+  background: rgba(10, 38, 34, 0.8);
+  color: var(--gold-bright);
+  border-radius: 8px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sort-btn:hover:not(:disabled) {
+  background: rgba(212, 168, 75, 0.2);
+  border-color: var(--gold-bright);
+  transform: scale(1.1);
+}
+
+.sort-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.sort-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 .sort-item::before {
@@ -2165,8 +2216,7 @@ body {
 }
 
 .sort-item:hover {
-  background: rgba(10, 38, 34, 0.8);
-  transform: translateX(8px) scale(1.02);
+  background: rgba(10, 38, 34, 0.7);
   box-shadow:
     0 6px 30px rgba(0, 0, 0, 0.6),
     0 0 25px rgba(212, 168, 75, 0.3),
@@ -2174,13 +2224,7 @@ body {
 }
 
 .sort-item:hover::before {
-  opacity: 0.5;
-}
-
-.sort-item.dragging {
-  opacity: 0.6;
-  transform: rotate(3deg) scale(1.05);
-  box-shadow: 0 10px 40px rgba(212, 168, 75, 0.4);
+  opacity: 0.4;
 }
 
 .sort-number {

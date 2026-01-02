@@ -235,7 +235,7 @@ class SortQuestion extends QuestionType {
     // 説明文を追加
     const instruction = document.createElement('div');
     instruction.className = 'question-instruction';
-    instruction.textContent = '※ ドラッグして正しい順番に並び替えてください';
+    instruction.textContent = '※ ↑↓ボタンで正しい順番に並び替えてください';
     container.appendChild(instruction);
 
     // 選択肢をシャッフルして表示
@@ -243,14 +243,7 @@ class SortQuestion extends QuestionType {
       .map((option, index) => ({ text: option, originalIndex: index }))
       .sort(() => Math.random() - 0.5);
 
-    this.currentOrder.forEach((item, index) => {
-      const btn = document.createElement('div');
-      btn.className = 'sort-item';
-      btn.draggable = true;
-      btn.dataset.index = index;
-      btn.innerHTML = `<span class="sort-number">${index + 1}</span><span class="sort-text">${item.text}</span>`;
-      container.appendChild(btn);
-    });
+    this.renderItems();
 
     // 決定ボタン
     const submitBtn = document.createElement('button');
@@ -258,84 +251,93 @@ class SortQuestion extends QuestionType {
     submitBtn.textContent = '回答する';
     submitBtn.id = 'submit-sort';
     container.appendChild(submitBtn);
-
-    // ドラッグ&ドロップのイベントを設定
-    this.setupDragAndDrop();
   }
 
-  setupDragAndDrop() {
-    let draggedElement = null;
+  renderItems() {
+    // 既存のアイテムを削除（決定ボタンは残す）
+    const existingItems = this.container.querySelectorAll('.sort-item');
+    existingItems.forEach(item => item.remove());
 
-    const items = this.container.querySelectorAll('.sort-item');
-    items.forEach(item => {
-      item.addEventListener('dragstart', (e) => {
-        draggedElement = item;
-        item.classList.add('dragging');
-      });
+    const submitBtn = this.container.querySelector('.submit-btn');
 
-      item.addEventListener('dragend', () => {
-        item.classList.remove('dragging');
-      });
+    this.currentOrder.forEach((item, index) => {
+      const sortItem = document.createElement('div');
+      sortItem.className = 'sort-item';
+      sortItem.dataset.index = index;
 
-      item.addEventListener('dragover', (e) => {
+      sortItem.innerHTML = `
+        <span class="sort-number">${index + 1}</span>
+        <span class="sort-text">${item.text}</span>
+        <div class="sort-controls">
+          <button class="sort-btn sort-up" data-index="${index}" ${index === 0 ? 'disabled' : ''}>↑</button>
+          <button class="sort-btn sort-down" data-index="${index}" ${index === this.currentOrder.length - 1 ? 'disabled' : ''}>↓</button>
+        </div>
+      `;
+
+      this.container.insertBefore(sortItem, submitBtn);
+    });
+
+    // ボタンのイベントリスナーを設定
+    this.setupButtonEvents();
+  }
+
+  setupButtonEvents() {
+    const upButtons = this.container.querySelectorAll('.sort-up');
+    const downButtons = this.container.querySelectorAll('.sort-down');
+
+    upButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
         e.preventDefault();
-        const afterElement = this.getDragAfterElement(this.container, e.clientY);
-        if (afterElement == null) {
-          this.container.insertBefore(draggedElement, this.container.querySelector('.submit-btn'));
-        } else {
-          this.container.insertBefore(draggedElement, afterElement);
+        const index = parseInt(btn.dataset.index);
+        if (index > 0) {
+          // 上のアイテムと入れ替え
+          [this.currentOrder[index], this.currentOrder[index - 1]] =
+            [this.currentOrder[index - 1], this.currentOrder[index]];
+          this.renderItems();
+          soundManager.playSE('click');
+        }
+      });
+    });
+
+    downButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const index = parseInt(btn.dataset.index);
+        if (index < this.currentOrder.length - 1) {
+          // 下のアイテムと入れ替え
+          [this.currentOrder[index], this.currentOrder[index + 1]] =
+            [this.currentOrder[index + 1], this.currentOrder[index]];
+          this.renderItems();
+          soundManager.playSE('click');
         }
       });
     });
   }
 
-  getDragAfterElement(container, y) {
-    const draggableElements = [...container.querySelectorAll('.sort-item:not(.dragging)')];
-
-    return draggableElements.reduce((closest, child) => {
-      const box = child.getBoundingClientRect();
-      const offset = y - box.top - box.height / 2;
-
-      if (offset < 0 && offset > closest.offset) {
-        return { offset: offset, element: child };
-      } else {
-        return closest;
-      }
-    }, { offset: Number.NEGATIVE_INFINITY }).element;
-  }
-
   getAnswer() {
-    const sortedItems = this.container.querySelectorAll('.sort-item');
-    return Array.from(sortedItems).map(item => {
-      const index = parseInt(item.dataset.index);
-      return this.currentOrder[index].originalIndex;
-    });
+    return this.currentOrder.map(item => item.text);
   }
 
   validate(userAnswer) {
-    return userAnswer.every((val, idx) => val === this.data.correct[idx]);
+    return userAnswer.every((val, idx) => val === this.data.answer[idx]);
   }
 
   getCorrectAnswer() {
-    return this.data.correct;
+    return this.data.answer;
   }
 
   showResult(isCorrect, userAnswer) {
     const items = this.container.querySelectorAll('.sort-item');
     const submitBtn = this.container.querySelector('.submit-btn');
+    const buttons = this.container.querySelectorAll('.sort-btn');
 
-    items.forEach(item => {
-      item.draggable = false;
-      item.style.cursor = 'default';
-    });
+    // すべてのボタンを無効化
+    buttons.forEach(btn => btn.disabled = true);
     if (submitBtn) submitBtn.style.display = 'none';
 
+    // 各アイテムに正解/不正解のクラスを追加
     items.forEach((item, index) => {
-      const originalIndex = parseInt(item.dataset.index);
-      const currentOriginalIndex = this.currentOrder[originalIndex].originalIndex;
-      const correctOriginalIndex = this.data.correct[index];
-
-      if (currentOriginalIndex === correctOriginalIndex) {
+      if (userAnswer[index] === this.data.answer[index]) {
         item.classList.add('correct');
       } else {
         item.classList.add('incorrect');
