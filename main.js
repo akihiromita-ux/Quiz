@@ -286,31 +286,37 @@ class SortQuestion extends QuestionType {
     const downButtons = this.container.querySelectorAll('.sort-down');
 
     upButtons.forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      const handleUp = (e) => {
         e.preventDefault();
+        e.stopPropagation();
         const index = parseInt(btn.dataset.index);
-        if (index > 0) {
+        if (index > 0 && !btn.disabled) {
           // 上のアイテムと入れ替え
           [this.currentOrder[index], this.currentOrder[index - 1]] =
             [this.currentOrder[index - 1], this.currentOrder[index]];
           this.renderItems();
           soundManager.playSE('click');
         }
-      });
+      };
+      btn.addEventListener('click', handleUp);
+      btn.addEventListener('touchend', handleUp);
     });
 
     downButtons.forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      const handleDown = (e) => {
         e.preventDefault();
+        e.stopPropagation();
         const index = parseInt(btn.dataset.index);
-        if (index < this.currentOrder.length - 1) {
+        if (index < this.currentOrder.length - 1 && !btn.disabled) {
           // 下のアイテムと入れ替え
           [this.currentOrder[index], this.currentOrder[index + 1]] =
             [this.currentOrder[index + 1], this.currentOrder[index]];
           this.renderItems();
           soundManager.playSE('click');
         }
-      });
+      };
+      btn.addEventListener('click', handleDown);
+      btn.addEventListener('touchend', handleDown);
     });
   }
 
@@ -1271,11 +1277,23 @@ function setupQuestionEventListeners() {
   } else if (questionType instanceof SortQuestion) {
     // 並び替え：決定ボタンで回答確定
     const submitBtn = answerGrid.querySelector('.submit-btn');
-    submitBtn.addEventListener('click', () => {
+    if (!submitBtn) {
+      console.error('❌ submitBtn not found!');
+      return;
+    }
+    console.log('✅ submitBtn found, setting up event listener');
+
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('🎯 Submit button clicked!');
       soundManager.playSE('click');
       const selectedAnswer = questionType.getAnswer();
       handleAnswer(selectedAnswer);
-    });
+    };
+
+    submitBtn.addEventListener('click', handleSubmit);
+    submitBtn.addEventListener('touchend', handleSubmit);
   }
 }
 
