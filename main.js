@@ -232,6 +232,33 @@ class SortQuestion extends QuestionType {
     this.container = container;
     container.innerHTML = '';
 
+    console.log('🔧 SortQuestion.render() called');
+    console.log('   data:', this.data);
+    console.log('   data.answer:', this.data?.answer);
+    console.log('   data.options:', this.data?.options);
+
+    // データの整合性チェック（重要！）
+    if (!this.data || !this.data.answer || !Array.isArray(this.data.answer) || !this.data.options) {
+      console.error('❌ SortQuestion: データが不正です', this.data);
+      const errorMsg = document.createElement('div');
+      errorMsg.className = 'error-message';
+      errorMsg.style.color = 'red';
+      errorMsg.style.padding = '20px';
+      errorMsg.style.textAlign = 'center';
+      errorMsg.innerHTML = `
+        <h3>⚠️ データ読み込みエラー</h3>
+        <p>問題データが正しく読み込まれていません。</p>
+        <p>ページを再読み込みしてください。</p>
+        <button onclick="location.reload()" class="btn-primary" style="margin-top: 20px;">
+          再読み込み
+        </button>
+      `;
+      container.appendChild(errorMsg);
+      return;
+    }
+
+    console.log('✅ SortQuestion: データ検証OK');
+
     // 説明文を追加
     const instruction = document.createElement('div');
     instruction.className = 'question-instruction';
@@ -242,6 +269,8 @@ class SortQuestion extends QuestionType {
     this.currentOrder = [...this.data.options]
       .map((option, index) => ({ text: option, originalIndex: index }))
       .sort(() => Math.random() - 0.5);
+
+    console.log('   currentOrder:', this.currentOrder);
 
     // 決定ボタンを先に作成（renderItems()で参照するため）
     this.submitBtn = document.createElement('button');
@@ -583,24 +612,43 @@ async function loadQuizData(stageId = 'ai') {
       if (type === 'multiple') type = 'multiple-choice';
       // sortはそのまま
 
+      // データの整合性チェック
+      if (!quiz.answer) {
+        console.error(`❌ 問題 ${index} に answer がありません:`, quiz);
+      }
+
       // answer を correct（インデックス）に変換
       let correct;
+      let answer = quiz.answer; // 元のanswerも保持（sortで使用）
+
       if (type === 'single-choice') {
         // answerの文字列をoptionsの中で探してインデックスを取得
         correct = quiz.options.indexOf(quiz.answer);
-      } else if (type === 'multiple-choice' || type === 'sort') {
+      } else if (type === 'multiple-choice') {
         // answerの配列の各要素をoptionsの中で探してインデックス配列を取得
         correct = quiz.answer.map(ans => quiz.options.indexOf(ans));
+      } else if (type === 'sort') {
+        // sortの場合は文字列配列をそのまま使用（インデックス変換不要）
+        correct = quiz.answer;
+        answer = quiz.answer;
       }
 
-      return {
+      const convertedQuiz = {
         type: type,
         question: quiz.question,
         options: quiz.options,
         correct: correct,
+        answer: answer, // sortで使用する元のanswer配列
         category: stage.name,
         minLevel: quiz.minLevel || 1 // minLevelがない場合は1
       };
+
+      // データ検証ログ（sortのみ）
+      if (type === 'sort') {
+        console.log(`✅ Sort問題 ${index}: answer =`, answer);
+      }
+
+      return convertedQuiz;
     });
 
     console.log(`✅ クイズデータ読み込み完了: ${quizData.length}問`);
@@ -1310,6 +1358,17 @@ function shuffleArray(array) {
 }
 
 function startQuiz() {
+  console.log('🎮 startQuiz() called');
+
+  // データが正しく読み込まれているか確認
+  if (!quizData || quizData.length === 0) {
+    console.error('❌ quizData が空です。データを再読み込みします...');
+    alert('問題データが読み込まれていません。ページを再読み込みしてください。');
+    return;
+  }
+
+  console.log(`✅ quizData loaded: ${quizData.length} questions`);
+
   showScreen('game-screen');
   // クイズプレイ中のBGMに切り替え
   soundManager.playBGM('correct');
