@@ -263,6 +263,7 @@ class SortQuestion extends QuestionType {
   setupSubmitButton() {
     if (!this.submitBtn) {
       console.error('❌ submitBtn not found in setupSubmitButton!');
+      alert('ERROR: Submit button not found!');
       return;
     }
 
@@ -271,29 +272,54 @@ class SortQuestion extends QuestionType {
     let isProcessing = false;
 
     const handleSubmit = (e) => {
-      console.log('🎯 Submit clicked/touched:', e.type);
+      try {
+        alert('Button Clicked! Event type: ' + e.type);
+        console.log('🎯 Submit clicked/touched:', e.type);
 
-      if (isProcessing) {
-        console.log('⏭️ Already processing');
-        return;
-      }
+        if (isProcessing) {
+          console.log('⏭️ Already processing');
+          alert('Already processing, please wait');
+          return;
+        }
 
-      e.preventDefault();
-      e.stopPropagation();
+        e.preventDefault();
+        e.stopPropagation();
 
-      isProcessing = true;
-      console.log('✅ Processing answer...');
+        isProcessing = true;
+        console.log('✅ Processing answer...');
 
-      soundManager.playSE('click');
+        // iOS Audio Context Unlock - 重要！
+        if (typeof Howler !== 'undefined' && Howler.ctx && Howler.ctx.state === 'suspended') {
+          console.log('🔊 Resuming Audio Context for iOS...');
+          Howler.ctx.resume().then(() => {
+            console.log('✅ Audio Context resumed');
+          }).catch(err => {
+            console.error('❌ Audio Context resume failed:', err);
+          });
+        }
 
-      // handleAnswer()を通して正解判定・スコア計算・次の問題表示を行う
-      const userAnswer = this.getAnswer();
-      handleAnswer(userAnswer);
+        alert('About to play sound...');
+        soundManager.playSE('click');
+        alert('Sound played. Getting answer...');
 
-      // リセット（次の問題用）
-      setTimeout(() => {
+        // handleAnswer()を通して正解判定・スコア計算・次の問題表示を行う
+        const userAnswer = this.getAnswer();
+        console.log('User answer:', userAnswer);
+        alert('Answer: ' + JSON.stringify(userAnswer));
+
+        handleAnswer(userAnswer);
+        alert('handleAnswer called successfully!');
+
+        // リセット（次の問題用）
+        setTimeout(() => {
+          isProcessing = false;
+        }, 1000);
+
+      } catch (error) {
+        console.error('❌ Error in handleSubmit:', error);
+        alert('ERROR in handleSubmit: ' + error.message + '\nStack: ' + error.stack);
         isProcessing = false;
-      }, 1000);
+      }
     };
 
     // イベントリスナーを設定
@@ -305,6 +331,7 @@ class SortQuestion extends QuestionType {
     this.submitBtn.addEventListener('touchend', handleSubmit, { passive: false });
 
     console.log('✅ Event listeners attached to submit button');
+    alert('Event listeners attached to submit button!');
   }
 
   renderItems() {
@@ -391,11 +418,42 @@ class SortQuestion extends QuestionType {
   }
 
   getAnswer() {
-    return this.currentOrder.map(item => item.text);
+    try {
+      console.log('getAnswer() called, currentOrder:', this.currentOrder);
+      const answer = this.currentOrder.map(item => item.text);
+      console.log('getAnswer() result:', answer);
+      return answer;
+    } catch (error) {
+      console.error('❌ Error in getAnswer:', error);
+      alert('ERROR in getAnswer: ' + error.message);
+      return [];
+    }
   }
 
   validate(userAnswer) {
-    return userAnswer.every((val, idx) => val === this.data.answer[idx]);
+    try {
+      console.log('validate() called');
+      console.log('  userAnswer:', userAnswer);
+      console.log('  correctAnswer:', this.data.answer);
+
+      if (!Array.isArray(userAnswer) || !Array.isArray(this.data.answer)) {
+        console.error('❌ Invalid array in validate');
+        return false;
+      }
+
+      if (userAnswer.length !== this.data.answer.length) {
+        console.error('❌ Length mismatch in validate');
+        return false;
+      }
+
+      const result = userAnswer.every((val, idx) => val === this.data.answer[idx]);
+      console.log('validate() result:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Error in validate:', error);
+      alert('ERROR in validate: ' + error.message);
+      return false;
+    }
   }
 
   getCorrectAnswer() {
@@ -2345,6 +2403,39 @@ async function init() {
   } else {
     console.log('✅ プレイヤー名:', gameState.playerName);
   }
+
+  // iOS Audio Context Unlock - 最初のユーザーアクションでresumeする
+  let audioUnlocked = false;
+  const unlockAudio = () => {
+    if (audioUnlocked) return;
+
+    console.log('🔊 Attempting to unlock Audio Context...');
+
+    if (typeof Howler !== 'undefined' && Howler.ctx) {
+      console.log('   Current Audio Context state:', Howler.ctx.state);
+
+      if (Howler.ctx.state === 'suspended') {
+        Howler.ctx.resume().then(() => {
+          console.log('✅ Audio Context unlocked successfully!');
+          audioUnlocked = true;
+          alert('Audio unlocked! State: ' + Howler.ctx.state);
+        }).catch(err => {
+          console.error('❌ Failed to unlock Audio Context:', err);
+          alert('Failed to unlock audio: ' + err.message);
+        });
+      } else {
+        console.log('✅ Audio Context already in state:', Howler.ctx.state);
+        audioUnlocked = true;
+      }
+    }
+  };
+
+  // 複数のイベントでunlockを試みる
+  ['touchstart', 'touchend', 'click', 'keydown'].forEach(eventType => {
+    document.addEventListener(eventType, unlockAudio, { once: true, passive: true });
+  });
+
+  console.log('🎵 iOS Audio Context unlock listeners added');
 }
 
 // DOMContentLoadedイベントを待ってから初期化
