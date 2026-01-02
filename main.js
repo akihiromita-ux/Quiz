@@ -371,7 +371,7 @@ let quizData = [];
 // ステージ設定を読み込む関数
 async function loadStages() {
   try {
-    const response = await fetch('/src/data/stages.json');
+    const response = await fetch('/data/stages.json');
     stages = await response.json();
     console.log(`✅ ステージデータ読み込み完了: ${stages.length}ステージ`);
     return true;
@@ -397,7 +397,7 @@ async function loadQuizData(stageId = 'ai') {
 
     console.log(`📚 クイズデータ読み込み開始: ${stage.name} (${stage.quizFile})`);
 
-    const response = await fetch(`/src/data/quizzes/${stage.quizFile}`);
+    const response = await fetch(`/data/quizzes/${stage.quizFile}`);
     const jsonData = await response.json();
 
     // JSONの形式を内部形式に変換
@@ -1893,7 +1893,7 @@ let quotesData = [];
 // quotes.jsonを読み込む
 async function loadQuotes() {
   try {
-    const response = await fetch('/src/data/quotes.json');
+    const response = await fetch('/data/quotes.json');
     if (!response.ok) {
       throw new Error('Failed to load quotes.json');
     }
