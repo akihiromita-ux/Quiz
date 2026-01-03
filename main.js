@@ -221,338 +221,11 @@ class MultipleChoiceQuestion extends QuestionType {
   }
 }
 
-// 並び替え問題（スライド並び替え形式）
-class SortQuestion extends QuestionType {
-  constructor(questionData) {
-    super(questionData);
-    this.currentOrder = [];
-  }
-
-  render(container) {
-    this.container = container;
-    container.innerHTML = '';
-
-    console.log('🔧 SortQuestion.render() called');
-    console.log('   data:', this.data);
-    console.log('   data.answer:', this.data?.answer);
-    console.log('   data.options:', this.data?.options);
-
-    // データの整合性チェック（重要！）
-    if (!this.data || !this.data.answer || !Array.isArray(this.data.answer) || !this.data.options) {
-      console.error('❌ SortQuestion: データが不正です', this.data);
-      const errorMsg = document.createElement('div');
-      errorMsg.className = 'error-message';
-      errorMsg.style.color = 'red';
-      errorMsg.style.padding = '20px';
-      errorMsg.style.textAlign = 'center';
-      errorMsg.innerHTML = `
-        <h3>⚠️ データ読み込みエラー</h3>
-        <p>問題データが正しく読み込まれていません。</p>
-        <p>ページを再読み込みしてください。</p>
-        <button onclick="location.reload()" class="btn-primary" style="margin-top: 20px;">
-          再読み込み
-        </button>
-      `;
-      container.appendChild(errorMsg);
-      return;
-    }
-
-    console.log('✅ SortQuestion: データ検証OK');
-
-    // 説明文を追加
-    const instruction = document.createElement('div');
-    instruction.className = 'question-instruction';
-    instruction.textContent = '※ ↑↓ボタンで正しい順番に並び替えてください';
-    container.appendChild(instruction);
-
-    // 選択肢をシャッフルして表示
-    this.currentOrder = [...this.data.options]
-      .map((option, index) => ({ text: option, originalIndex: index }))
-      .sort(() => Math.random() - 0.5);
-
-    console.log('   currentOrder:', this.currentOrder);
-
-    // 決定ボタンを先に作成（renderItems()で参照するため）
-    this.submitBtn = document.createElement('button');
-    this.submitBtn.type = 'button';
-    this.submitBtn.className = 'submit-btn';
-    this.submitBtn.textContent = '回答する';
-    this.submitBtn.id = 'submit-sort';
-    this.submitBtn.style.position = 'relative';
-    this.submitBtn.style.zIndex = '100';
-    container.appendChild(this.submitBtn);
-
-    // アイテムを描画（submitBtnの前に挿入される）
-    this.renderItems();
-
-    // イベントリスナーを直接設定（外部に依存しない）
-    this.setupSubmitButton();
-  }
-
-  setupSubmitButton() {
-    if (!this.submitBtn) {
-      console.error('❌ submitBtn not found in setupSubmitButton!');
-      return;
-    }
-
-    console.log('✅ Setting up submit button directly in SortQuestion');
-
-    // データの整合性チェック
-    if (!this.data || !this.data.answer) {
-      console.error('❌ SortQuestion data is invalid:', this.data);
-      alert('エラー: 問題データが正しく読み込まれていません。ページを再読み込みしてください。');
-      return;
-    }
-
-    console.log('✅ Data validation passed. Answer:', this.data.answer);
-
-    let isProcessing = false;
-
-    const handleSubmit = (e) => {
-      try {
-        console.log('🎯 Submit clicked/touched:', e.type);
-
-        if (isProcessing) {
-          console.log('⏭️ Already processing');
-          return;
-        }
-
-        e.preventDefault();
-        e.stopPropagation();
-
-        isProcessing = true;
-        console.log('✅ Processing answer...');
-
-        // iOS Audio Context Unlock - 重要！
-        if (typeof Howler !== 'undefined' && Howler.ctx && Howler.ctx.state === 'suspended') {
-          console.log('🔊 Resuming Audio Context for iOS...');
-          Howler.ctx.resume().then(() => {
-            console.log('✅ Audio Context resumed');
-          }).catch(err => {
-            console.error('❌ Audio Context resume failed:', err);
-          });
-        }
-
-        soundManager.playSE('click');
-
-        // handleAnswer()を通して正解判定・スコア計算・次の問題表示を行う
-        const userAnswer = this.getAnswer();
-        console.log('User answer:', userAnswer);
-
-        // データの再検証（iOSでの非同期読み込み対策）
-        if (!this.data || !this.data.answer) {
-          console.error('❌ Data lost during processing!');
-          alert('エラー: 問題データが失われました。ページを再読み込みしてください。');
-          isProcessing = false;
-          return;
-        }
-
-        handleAnswer(userAnswer);
-
-        // リセット（次の問題用）
-        setTimeout(() => {
-          isProcessing = false;
-        }, 1000);
-
-      } catch (error) {
-        console.error('❌ Error in handleSubmit:', error);
-        alert('エラーが発生しました: ' + error.message);
-        isProcessing = false;
-      }
-    };
-
-    // イベントリスナーを設定
-    this.submitBtn.addEventListener('touchstart', (e) => {
-      console.log('👆 Touch started on submit button');
-    }, { passive: true });
-
-    this.submitBtn.addEventListener('click', handleSubmit, { passive: false });
-    this.submitBtn.addEventListener('touchend', handleSubmit, { passive: false });
-
-    console.log('✅ Event listeners attached to submit button');
-  }
-
-  renderItems() {
-    // 既存のアイテムを削除（決定ボタンは残す）
-    const existingItems = this.container.querySelectorAll('.sort-item');
-    existingItems.forEach(item => item.remove());
-
-    const submitBtn = this.container.querySelector('.submit-btn');
-
-    this.currentOrder.forEach((item, index) => {
-      const sortItem = document.createElement('div');
-      sortItem.className = 'sort-item';
-      sortItem.dataset.index = index;
-
-      sortItem.innerHTML = `
-        <span class="sort-number">${index + 1}</span>
-        <span class="sort-text">${item.text}</span>
-        <div class="sort-controls">
-          <button class="sort-btn sort-up" data-index="${index}" ${index === 0 ? 'disabled' : ''}>↑</button>
-          <button class="sort-btn sort-down" data-index="${index}" ${index === this.currentOrder.length - 1 ? 'disabled' : ''}>↓</button>
-        </div>
-      `;
-
-      this.container.insertBefore(sortItem, submitBtn);
-    });
-
-    // ボタンのイベントリスナーを設定
-    this.setupButtonEvents();
-  }
-
-  setupButtonEvents() {
-    const upButtons = this.container.querySelectorAll('.sort-up');
-    const downButtons = this.container.querySelectorAll('.sort-down');
-
-    upButtons.forEach(btn => {
-      btn.type = 'button';
-      let isHandling = false;
-
-      const handleUp = (e) => {
-        if (isHandling) return;
-        isHandling = true;
-
-        e.preventDefault();
-        e.stopPropagation();
-        const index = parseInt(btn.dataset.index);
-        if (index > 0 && !btn.disabled) {
-          // 上のアイテムと入れ替え
-          [this.currentOrder[index], this.currentOrder[index - 1]] =
-            [this.currentOrder[index - 1], this.currentOrder[index]];
-          this.renderItems();
-          soundManager.playSE('click');
-        }
-
-        setTimeout(() => { isHandling = false; }, 300);
-      };
-      btn.addEventListener('click', handleUp, { passive: false });
-      btn.addEventListener('touchend', handleUp, { passive: false });
-    });
-
-    downButtons.forEach(btn => {
-      btn.type = 'button';
-      let isHandling = false;
-
-      const handleDown = (e) => {
-        if (isHandling) return;
-        isHandling = true;
-
-        e.preventDefault();
-        e.stopPropagation();
-        const index = parseInt(btn.dataset.index);
-        if (index < this.currentOrder.length - 1 && !btn.disabled) {
-          // 下のアイテムと入れ替え
-          [this.currentOrder[index], this.currentOrder[index + 1]] =
-            [this.currentOrder[index + 1], this.currentOrder[index]];
-          this.renderItems();
-          soundManager.playSE('click');
-        }
-
-        setTimeout(() => { isHandling = false; }, 300);
-      };
-      btn.addEventListener('click', handleDown, { passive: false });
-      btn.addEventListener('touchend', handleDown, { passive: false });
-    });
-  }
-
-  getAnswer() {
-    try {
-      console.log('getAnswer() called, currentOrder:', this.currentOrder);
-
-      if (!this.currentOrder || this.currentOrder.length === 0) {
-        console.error('❌ currentOrder is empty');
-        return [];
-      }
-
-      const answer = this.currentOrder.map(item => item.text);
-      console.log('getAnswer() result:', answer);
-      return answer;
-    } catch (error) {
-      console.error('❌ Error in getAnswer:', error);
-      return [];
-    }
-  }
-
-  validate(userAnswer) {
-    try {
-      console.log('validate() called');
-      console.log('  userAnswer:', userAnswer);
-      console.log('  correctAnswer:', this.data ? this.data.answer : 'NO DATA');
-
-      // データの存在チェック
-      if (!this.data || !this.data.answer) {
-        console.error('❌ this.data or this.data.answer is missing');
-        return false;
-      }
-
-      if (!Array.isArray(userAnswer) || !Array.isArray(this.data.answer)) {
-        console.error('❌ Invalid array in validate');
-        return false;
-      }
-
-      if (userAnswer.length !== this.data.answer.length) {
-        console.error('❌ Length mismatch in validate');
-        return false;
-      }
-
-      const result = userAnswer.every((val, idx) => {
-        const isMatch = val === this.data.answer[idx];
-        console.log(`  [${idx}] "${val}" === "${this.data.answer[idx]}" ? ${isMatch}`);
-        return isMatch;
-      });
-
-      console.log('validate() result:', result);
-      return result;
-    } catch (error) {
-      console.error('❌ Error in validate:', error);
-      return false;
-    }
-  }
-
-  getCorrectAnswer() {
-    return this.data && this.data.answer ? this.data.answer : [];
-  }
-
-  showResult(isCorrect, userAnswer) {
-    try {
-      const items = this.container.querySelectorAll('.sort-item');
-      const submitBtn = this.container.querySelector('.submit-btn');
-      const buttons = this.container.querySelectorAll('.sort-btn');
-
-      // すべてのボタンを無効化
-      buttons.forEach(btn => btn.disabled = true);
-      if (submitBtn) submitBtn.style.display = 'none';
-
-      // データの存在チェック
-      if (!this.data || !this.data.answer) {
-        console.error('❌ Cannot show result: data.answer is missing');
-        return;
-      }
-
-      // 各アイテムに正解/不正解のクラスを追加
-      items.forEach((item, index) => {
-        // 安全な配列アクセス
-        if (index < userAnswer.length && index < this.data.answer.length) {
-          if (userAnswer[index] === this.data.answer[index]) {
-            item.classList.add('correct');
-          } else {
-            item.classList.add('incorrect');
-          }
-        }
-      });
-
-      console.log('✅ showResult completed');
-    } catch (error) {
-      console.error('❌ Error in showResult:', error);
-    }
-  }
-}
 
 // 問題形式のレジストリ（新しい形式を追加する場合はここに登録）
 const questionTypes = {
   'single-choice': SingleChoiceQuestion,
   'multiple-choice': MultipleChoiceQuestion,
-  'sort': SortQuestion,           // 並び替え
   // 将来追加予定：
   // 'swipe': SwipeQuestion,         // スワイプ仕分け
   // 'typing': TypingQuestion,       // タイピング
@@ -604,13 +277,16 @@ async function loadQuizData(stageId = 'ai') {
     const response = await fetch(`/data/quizzes/${stage.quizFile}`);
     const jsonData = await response.json();
 
+    // sortタイプの問題を除外してから変換
+    const filteredData = jsonData.filter(quiz => quiz.type !== 'sort');
+    console.log(`📝 並び替え問題を除外: ${jsonData.length}問 → ${filteredData.length}問`);
+
     // JSONの形式を内部形式に変換
-    quizData = jsonData.map((quiz, index) => {
+    quizData = filteredData.map((quiz, index) => {
       // type を変換
       let type = quiz.type;
       if (type === 'single') type = 'single-choice';
       if (type === 'multiple') type = 'multiple-choice';
-      // sortはそのまま
 
       // データの整合性チェック
       if (!quiz.answer) {
@@ -619,7 +295,6 @@ async function loadQuizData(stageId = 'ai') {
 
       // answer を correct（インデックス）に変換
       let correct;
-      let answer = quiz.answer; // 元のanswerも保持（sortで使用）
 
       if (type === 'single-choice') {
         // answerの文字列をoptionsの中で探してインデックスを取得
@@ -627,28 +302,16 @@ async function loadQuizData(stageId = 'ai') {
       } else if (type === 'multiple-choice') {
         // answerの配列の各要素をoptionsの中で探してインデックス配列を取得
         correct = quiz.answer.map(ans => quiz.options.indexOf(ans));
-      } else if (type === 'sort') {
-        // sortの場合は文字列配列をそのまま使用（インデックス変換不要）
-        correct = quiz.answer;
-        answer = quiz.answer;
       }
 
-      const convertedQuiz = {
+      return {
         type: type,
         question: quiz.question,
         options: quiz.options,
         correct: correct,
-        answer: answer, // sortで使用する元のanswer配列
         category: stage.name,
         minLevel: quiz.minLevel || 1 // minLevelがない場合は1
       };
-
-      // データ検証ログ（sortのみ）
-      if (type === 'sort') {
-        console.log(`✅ Sort問題 ${index}: answer =`, answer);
-      }
-
-      return convertedQuiz;
     });
 
     console.log(`✅ クイズデータ読み込み完了: ${quizData.length}問`);
@@ -1500,10 +1163,6 @@ function setupQuestionEventListeners() {
       }
       handleAnswer(selectedAnswer);
     });
-  } else if (questionType instanceof SortQuestion) {
-    // 並び替え：SortQuestionクラス内で直接イベントリスナーを設定済み
-    // setupSubmitButton()が既に呼ばれているため、ここでは何もしない
-    console.log('ℹ️ SortQuestion handles its own event listeners');
   }
 }
 
