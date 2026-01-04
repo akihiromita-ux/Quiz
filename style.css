@@ -811,6 +811,16 @@ body {
   margin-bottom: 30px;
 }
 
+/* ステータス画面のキャラクター名 */
+.character-detail h3,
+#status-character-name {
+  color: var(--gold-bright);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
 .character-avatar-large {
   width: 200px;
   height: 200px;
@@ -1630,7 +1640,12 @@ body {
 /* レスポンシブ */
 @media (max-width: 600px) {
   body {
-    padding: 10px;
+    padding: 5px;
+    min-height: 100svh;
+  }
+
+  #app {
+    min-height: auto;
   }
 
   .title {
@@ -1646,17 +1661,164 @@ body {
     font-size: 3rem;
   }
 
-  .game-header {
+  /* ===== クイズ画面のスマホ最適化（1画面に収める） ===== */
+  #game-screen {
+    height: 100svh;
+    max-height: 100svh;
+    display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    border-radius: 0;
+    overflow: hidden;
+  }
+
+  .game-header {
+    flex-direction: row;
+    align-items: center;
+    padding: 10px 15px;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .player-info {
+    gap: 8px;
+  }
+
+  .character-avatar {
+    width: 40px;
+    height: 40px;
+  }
+
+  .level-info {
+    gap: 2px;
+  }
+
+  .level-badge {
+    padding: 4px 10px;
+    font-size: 0.8rem;
+  }
+
+  .exp-bar-container {
+    width: 80px;
+    height: 8px;
+  }
+
+  .exp-text {
+    font-size: 0.7rem;
+  }
+
+  .game-stats {
+    gap: 12px;
+  }
+
+  .stat-label {
+    font-size: 0.7rem;
+  }
+
+  .stat-value {
+    font-size: 1.1rem;
+  }
+
+  .quiz-area {
+    padding: 12px 15px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .question-container {
+    padding: 15px 18px;
+    margin-bottom: 12px;
+    border-radius: 18px;
+    flex-shrink: 0;
+  }
+
+  .question-number {
+    font-size: 0.85rem;
+    margin-bottom: 8px;
   }
 
   .question-text {
-    font-size: 1.1rem;
+    font-size: 1rem;
+    line-height: 1.6;
   }
 
   .answer-grid {
     grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .answer-btn {
+    min-height: 50px;
+    padding: 12px 18px 12px 55px;
+    font-size: 0.95rem;
+    border-radius: 15px;
+  }
+
+  .answer-label {
+    left: 12px;
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .quiz-footer {
+    margin-top: 8px;
+    flex-shrink: 0;
+  }
+
+  .time-display {
+    font-size: 1.2rem;
+    gap: 8px;
+  }
+
+  .time-icon {
+    font-size: 1.4rem;
+  }
+
+  .question-instruction {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+  }
+
+  .checkbox-btn {
+    padding-left: 55px;
+  }
+
+  .submit-btn {
+    padding: 14px 24px;
+    font-size: 1rem;
+    min-height: 50px;
+    margin-top: 10px;
+  }
+
+  /* 並び替え問題 */
+  .sort-item {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .sort-number {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+
+  .sort-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 1.1rem;
+    border-width: 2px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  .sort-text {
+    font-size: 0.9rem;
   }
 
   .volume-control {
@@ -1671,30 +1833,6 @@ body {
 
   .volume-control input[type="range"] {
     width: 100%;
-  }
-
-  .sort-item {
-    padding: 14px 16px;
-    gap: 12px;
-  }
-
-  .sort-btn {
-    width: 48px;
-    height: 48px;
-    font-size: 1.4rem;
-    border-width: 3px;
-    min-width: 48px;
-    min-height: 48px;
-  }
-
-  .sort-text {
-    font-size: 0.95rem;
-  }
-
-  .submit-btn {
-    padding: 18px 32px;
-    font-size: 1.1rem;
-    min-height: 60px;
   }
 }
 
@@ -1947,8 +2085,6 @@ body {
   flex-direction: column;
   gap: 25px;
   min-width: 0; /* Flexboxの縮小問題を防ぐ */
-  background: rgba(255, 0, 0, 0.05); /* デバッグ用：薄い赤背景 */
-  border: 1px dashed rgba(255, 0, 0, 0.3); /* デバッグ用：赤い破線 */
 }
 
 .main-title {
@@ -1971,15 +2107,6 @@ body {
   min-height: 300px; /* 最小高さを確保 */
 }
 
-/* デバッグ用：見える化 */
-.genre-tiles:empty::after {
-  content: 'タイルが読み込まれていません';
-  color: red;
-  font-size: 18px;
-  padding: 20px;
-  display: block;
-  border: 2px dashed red;
-}
 
 .genre-tile {
   background: rgba(10, 38, 34, 0.5);
@@ -2036,11 +2163,12 @@ body {
 }
 
 .genre-tile-name {
-  font-size: 1.3rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: #f0f0f0;
   margin-bottom: 8px;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
 }
 
 .genre-tile-desc {
